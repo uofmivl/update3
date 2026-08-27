@@ -94,7 +94,7 @@ section[id], span[id] { scroll-margin-top: 96px; }
 .mobile-menu a:hover { background: rgba(255,255,255,.1); }
 .mobile-menu .mm-cta { margin-top: 8px; display: flex; width: 100%; align-items: center; justify-content: center; background: #fff; color: #25205e; font-weight: 800; }
 @media (min-width: 640px) { .nav { padding-left: 20px; padding-right: 20px; } .nav-cta { display: block; } }
-@media (max-width: 767px) { .nav-hidden { transform: translate(-50%, calc(-100% - 24px - env(safe-area-inset-top, 0px))); } }
+@media (max-width: 767px) { .nav-hidden { opacity: 0; visibility: hidden; pointer-events: none; transform: translate(-50%, -40%); } }
 @media (min-width: 768px) { .nav-links { display: flex; } .menu-btn { display: none; } .mobile-menu { display: none !important; } }
 
 /* ---------- hero ---------- */
@@ -836,20 +836,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     document.querySelectorAll('.js-primary, .js-store').forEach(function (a) { a.href = playStoreUrl; });
   }
 
-  // nav background on scroll + auto-hide on mobile (down hides, up reveals; CSS limits hide
-  // to <768px). The page scrolls inside .d2c-page, not the document — read scrollTop there.
+  // nav: starts hidden on mobile, any scroll-up (or open menu) reveals, scroll-down hides.
+  // CSS applies the hidden state only <768px, so desktop ignores the class entirely.
+  // The page scrolls inside .d2c-page — read scrollTop there, not window.scrollY.
+  // The interval is a fallback for browsers that swallow scroller scroll events; it is
+  // idempotent and harmless when events fire normally.
   var nav = document.getElementById('nav');
   var page = document.querySelector('.d2c-page');
   var lastY = page.scrollTop;
+  if (window.matchMedia('(max-width: 767px)').matches) nav.classList.add('nav-hidden');
   var onScroll = function () {
     var y = page.scrollTop;
     nav.classList.toggle('nav-scrolled', y > 28);
     var menuOpen = document.getElementById('mobileMenu').classList.contains('open');
-    if (y <= 80 || menuOpen || y < lastY - 4) nav.classList.remove('nav-hidden');
+    if (menuOpen || y < lastY - 4) nav.classList.remove('nav-hidden');
     else if (y > lastY + 4) nav.classList.add('nav-hidden');
     lastY = y;
   };
   page.addEventListener('scroll', onScroll, { passive: true });
+  setInterval(onScroll, 250);
   onScroll();
 
   // CookieYes gate: revisit click unlocks the banner; any close/consent action re-clamps it.
