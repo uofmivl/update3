@@ -912,9 +912,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if (box.checked !== want) box.click();
     var save = ckySave();
     if (save) save.click();
-    setTimeout(function () {  // CookieYes may re-render after saving — verify, retry once, resync UI
+    setTimeout(function () {  // verify against CookieYes's real state
       var b = ckyBox();
-      if (b && b.checked !== want) { b.click(); var s = ckySave(); if (s) s.click(); b = ckyBox(); }
+      if (b && b.checked !== want && !want) {
+        // opting back IN doesn't commit through the hidden modal — erase the stored
+        // opt-out (no consent cookie = default analytics-on state) and reload clean
+        ['', '; domain=' + location.hostname, '; domain=.' + location.hostname.replace(/^www\./, '')]
+          .forEach(function (d) { document.cookie = 'cookieyes-consent=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/' + d; });
+        location.reload();
+        return;
+      }
       if (b) ppToggle.checked = !b.checked;
     }, 400);
   });
