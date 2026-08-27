@@ -91,7 +91,7 @@ section[id], span[id] { scroll-margin-top: 96px; }
 .mobile-menu a:hover { background: rgba(255,255,255,.1); }
 .mobile-menu .mm-cta { margin-top: 8px; display: flex; width: 100%; align-items: center; justify-content: center; background: #fff; color: #25205e; font-weight: 800; }
 @media (min-width: 640px) { .nav { padding-left: 20px; padding-right: 20px; } .nav-cta { display: block; } }
-@media (max-width: 767px) { .nav-hidden { transform: translate(-50%, calc(-100% - 24px - env(safe-area-inset-top))); } }
+@media (max-width: 767px) { .nav-hidden { transform: translate(-50%, calc(-100% - 24px - env(safe-area-inset-top, 0px))); } }
 @media (min-width: 768px) { .nav-links { display: flex; } .menu-btn { display: none; } .mobile-menu { display: none !important; } }
 
 /* ---------- hero ---------- */
@@ -137,7 +137,9 @@ section[id], span[id] { scroll-margin-top: 96px; }
 @media (max-width: 640px) { .download-actions { align-items: stretch; } .cta-pair { width: 100%; } .download-primary { width: 100%; } .invite-btn { width: 100%; } .download-secondary { justify-content: center; padding-left: 0; } .hero-join-link { display: flex; margin: 17px auto 0; } .phone-frame { width: 272px; transform: rotate(2deg); } }
 
 /* ---------- marquee ---------- */
-.marquee { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; overflow: hidden; border-top: 1px solid rgba(255,255,255,.1); background: rgba(63,47,174,.4); padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px)); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.marquee { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; overflow: hidden; border-top: 1px solid rgba(255,255,255,.1); background: rgba(63,47,174,.4); padding: 12px 0; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+/* iOS only: keep ticker text above the home indicator (Android browsers report bogus/system-bar insets) */
+@supports (-webkit-touch-callout: none) { .marquee { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); } }
 .marquee-track { display: flex; width: max-content; align-items: center; white-space: nowrap; animation: marquee 28s linear infinite; }
 .marquee-item { display: flex; align-items: center; gap: 32px; padding-right: 32px; }
 .marquee-item .mono { font-size: 10px; font-weight: 500; color: rgba(255,255,255,.45); }
