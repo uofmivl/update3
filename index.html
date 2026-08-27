@@ -142,11 +142,25 @@ section[id], span[id] { scroll-margin-top: 96px; }
 .marquee { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; overflow: hidden; border-top: 1px solid rgba(255,255,255,.1); background: rgba(63,47,174,.4); padding: 12px 0; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 /* iOS only: keep ticker text above the home indicator (Android browsers report bogus/system-bar insets) */
 @supports (-webkit-touch-callout: none) { .marquee { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); } }
-/* CookieYes (injected by GTM): never auto-pop — banner/overlay render only while body carries
-   .cky-open (set by clicking the revisit button, cleared again on any close/consent action) */
-body:not(.cky-open) .cky-consent-container, body:not(.cky-open) .cky-overlay { display: none !important; }
-/* the "We value your privacy" banner never shows — only the opt-out preferences modal does */
-.cky-consent-bar { display: none !important; }
+/* CookieYes (injected by GTM): its UI never renders — the site's own privacy panel below
+   drives the hidden opt-out checkbox + save button programmatically */
+.cky-consent-container, .cky-consent-bar, .cky-overlay, .cky-modal { display: none !important; }
+/* site-styled privacy panel, opens from the revisit button */
+.privacy-panel { position: fixed; right: 12px; bottom: 96px; z-index: 55; width: min(340px, calc(100vw - 24px)); border-radius: 20px; border: 1px solid rgba(255,255,255,.18); background: rgba(7,25,58,.95); box-shadow: 0 24px 60px rgba(4,12,30,.5); padding: 18px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.pp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.pp-head .mono { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: .12em; color: #dffcff; }
+.pp-close { display: flex; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: transparent; color: rgba(255,255,255,.7); }
+.pp-lead { font-size: 12.5px; line-height: 1.55; color: rgba(255,255,255,.78); }
+.pp-lead strong { color: #fff; }
+.pp-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 14px; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); cursor: pointer; }
+.pp-label { font-size: 12px; font-weight: 700; color: #fff; }
+.pp-sub { font-size: 10px; font-weight: 500; color: rgba(255,255,255,.5); }
+.pp-row input { position: absolute; opacity: 0; pointer-events: none; }
+.pp-switch { position: relative; flex-shrink: 0; width: 40px; height: 22px; border-radius: 999px; background: rgba(255,255,255,.18); transition: background .2s; }
+.pp-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 999px; background: #fff; transition: transform .2s, background .2s; }
+.pp-row input:checked + .pp-switch { background: #dffcff; }
+.pp-row input:checked + .pp-switch::after { transform: translateX(18px); background: #06142e; }
+.pp-note { margin-top: 10px; font-size: 10px; color: rgba(255,255,255,.45); }
 /* revisit button: always visible, pinned bottom-right just above the ticker (beats its inline styles) */
 .cky-btn-revisit-wrapper { display: flex !important; position: fixed !important; top: auto !important; left: auto !important; right: 12px !important; bottom: 46px !important; z-index: 45 !important; }
 .marquee-track { display: flex; width: max-content; align-items: center; white-space: nowrap; animation: marquee 28s linear infinite; }
@@ -825,6 +839,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
   </div>
 
+  <!-- privacy panel (replaces the CookieYes modal UI) -->
+  <div class="privacy-panel" id="privacyPanel" hidden>
+    <div class="pp-head">
+      <span class="mono"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>PRIVACY &amp; DATA</span>
+      <button class="pp-close" id="ppClose" aria-label="Close privacy panel"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    </div>
+    <p class="pp-lead"><strong>We never sell or share your personal information.</strong> That&rsquo;s the default, always &mdash; nothing to configure. The only optional cookies are anonymous analytics that help us improve Down2Chill.</p>
+    <label class="pp-row">
+      <span><span class="pp-label">Anonymous analytics</span><br><span class="pp-sub">usage stats only &mdash; never tied to you</span></span>
+      <input type="checkbox" id="ppAnalytics" checked>
+      <span class="pp-switch" aria-hidden="true"></span>
+    </label>
+    <p class="pp-note">Your choice saves instantly and applies right away.</p>
+  </div>
+
 </main>
 
 <script>
@@ -853,16 +882,35 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   page.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
-  // CookieYes gate: revisit click unlocks the banner; any close/consent action re-clamps it.
-  // Capture phase so CookieYes stopping propagation can't starve us.
+  // privacy panel: fronts CookieYes, whose own UI is fully display:none'd. The revisit
+  // button (capture phase, so CookieYes never sees the click) toggles our panel; the
+  // analytics switch drives CookieYes's hidden opt-out checkbox + save button. A checked
+  // CookieYes box means opted OUT, i.e. the inverse of our switch.
+  var panel = document.getElementById('privacyPanel');
+  var ppToggle = document.getElementById('ppAnalytics');
+  var ckyBox = function () { return document.querySelector('.cky-modal input[type="checkbox"], .cky-consent-container input[type="checkbox"]'); };
+  var ckySave = function () {
+    return document.querySelector('.cky-btn-preferences') ||
+      Array.prototype.find.call(document.querySelectorAll('.cky-modal button, .cky-consent-container button'), function (b) { return /save/i.test(b.textContent); });
+  };
   document.addEventListener('click', function (e) {
     if (!e.target.closest) return;
-    if (e.target.closest('.cky-btn-revisit-wrapper')) document.body.classList.add('cky-open');
-    else if (e.target.closest('.cky-btn-accept, .cky-btn-reject, .cky-btn-preferences, .cky-btn-cancel, .cky-modal-close, .cky-banner-btn-close, .cky-preference-close, .cky-overlay'))
-      setTimeout(function () { document.body.classList.remove('cky-open'); }, 500);
+    if (e.target.closest('.cky-btn-revisit-wrapper')) {
+      e.preventDefault(); e.stopPropagation();
+      var box = ckyBox();
+      if (box) ppToggle.checked = !box.checked;
+      panel.hidden = !panel.hidden;
+    } else if (!panel.hidden && !e.target.closest('#privacyPanel')) {
+      panel.hidden = true;
+    }
   }, true);
-  document.addEventListener('cookieyes_consent_update', function () {
-    setTimeout(function () { document.body.classList.remove('cky-open'); }, 500);
+  document.getElementById('ppClose').addEventListener('click', function () { panel.hidden = true; });
+  ppToggle.addEventListener('change', function () {
+    var box = ckyBox();
+    if (!box) return;
+    if (box.checked === ppToggle.checked) box.click();
+    var save = ckySave();
+    if (save) save.click();
   });
 
   // mobile menu
