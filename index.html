@@ -31,6 +31,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; background: #30226f; }
 body { margin: 0; font-family: 'Montserrat', ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; background: #30226f; color: #fff; }
+/* the document itself never scrolls — .d2c-page is the scroller. Browser toolbars only
+   auto-hide on document scroll, so the viewport never resizes and fixed bars never move */
+html, body { height: 100%; overflow: hidden; }
 button, a, input { font: inherit; }
 button { cursor: pointer; }
 h1,h2,h3,p { margin: 0; }
@@ -39,7 +42,7 @@ h1,h2,h3,p { margin: 0; }
 .hidden { display: none !important; }
 section[id], span[id] { scroll-margin-top: 96px; }
 
-.d2c-page { overflow: hidden; min-height: 100dvh; padding-bottom: 56px; background: radial-gradient(ellipse at 50% 50%, #5B4FE9 0%, rgba(91,79,233,.82) 28%, transparent 74%), radial-gradient(ellipse at 28% 8%, rgba(126,88,239,.44) 0%, transparent 34%), radial-gradient(ellipse at 84% 38%, rgba(43,112,224,.3) 0%, transparent 36%), radial-gradient(ellipse at 52% 98%, rgba(65,93,208,.34) 0%, transparent 42%), linear-gradient(145deg, #06142e 0%, #0c2450 38%, #123b79 68%, #0e4d87 100%); background-attachment: fixed; background-position: center; background-size: cover; background-repeat: no-repeat; }
+.d2c-page { height: 100%; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth; padding-bottom: 56px; background: radial-gradient(ellipse at 50% 50%, #5B4FE9 0%, rgba(91,79,233,.82) 28%, transparent 74%), radial-gradient(ellipse at 28% 8%, rgba(126,88,239,.44) 0%, transparent 34%), radial-gradient(ellipse at 84% 38%, rgba(43,112,224,.3) 0%, transparent 36%), radial-gradient(ellipse at 52% 98%, rgba(65,93,208,.34) 0%, transparent 42%), linear-gradient(145deg, #06142e 0%, #0c2450 38%, #123b79 68%, #0e4d87 100%); background-attachment: fixed; background-position: center; background-size: cover; background-repeat: no-repeat; }
 
 /* ---------- shared effects ---------- */
 .section-line { height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.2), transparent); }
@@ -91,6 +94,7 @@ section[id], span[id] { scroll-margin-top: 96px; }
 .mobile-menu a:hover { background: rgba(255,255,255,.1); }
 .mobile-menu .mm-cta { margin-top: 8px; display: flex; width: 100%; align-items: center; justify-content: center; background: #fff; color: #25205e; font-weight: 800; }
 @media (min-width: 640px) { .nav { padding-left: 20px; padding-right: 20px; } .nav-cta { display: block; } }
+@media (max-width: 767px) { .nav-hidden { transform: translate(-50%, calc(-100% - 24px - env(safe-area-inset-top, 0px))); } }
 @media (min-width: 768px) { .nav-links { display: flex; } .menu-btn { display: none; } .mobile-menu { display: none !important; } }
 
 /* ---------- hero ---------- */
@@ -112,6 +116,7 @@ section[id], span[id] { scroll-margin-top: 96px; }
 .hero-social-note { font-size: 11px; color: rgba(255,255,255,.6); }
 .hero-shot { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; }
 @media (min-width: 640px) { .hero { padding-top: 176px; } .hero-sub { font-size: 18px; } }
+@media (max-width: 639px) { .hero { padding-top: 110px; } .d2c-page { padding-bottom: 38px; } }
 @media (min-width: 1024px) { .hero-grid { grid-template-columns: 1.06fr .94fr; } .hero-shot { translate: 0 -16px; } }
 
 /* download buttons */
@@ -135,7 +140,11 @@ section[id], span[id] { scroll-margin-top: 96px; }
 @media (max-width: 640px) { .download-actions { align-items: stretch; } .cta-pair { width: 100%; } .download-primary { width: 100%; } .invite-btn { width: 100%; } .download-secondary { justify-content: center; padding-left: 0; } .hero-join-link { display: flex; margin: 17px auto 0; } .phone-frame { width: 272px; transform: rotate(2deg); } }
 
 /* ---------- marquee ---------- */
-.marquee { position: fixed; left: 0; right: 0; bottom: 0; bottom: env(safe-area-inset-bottom, 0px); z-index: 40; overflow: hidden; border-top: 1px solid rgba(255,255,255,.1); background: rgba(63,47,174,.4); padding: 12px 0; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.marquee { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; overflow: hidden; border-top: 1px solid rgba(255,255,255,.1); background: rgba(63,47,174,.4); padding: 12px 0; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+/* iOS only: keep ticker text above the home indicator (Android browsers report bogus/system-bar insets) */
+@supports (-webkit-touch-callout: none) { .marquee { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); } }
+/* CookieYes (injected by GTM): suppress every piece of its UI — banner, overlay, revisit button */
+.cky-consent-container, .cky-overlay, .cky-btn-revisit-wrapper, .cky-modal { display: none !important; }
 .marquee-track { display: flex; width: max-content; align-items: center; white-space: nowrap; animation: marquee 28s linear infinite; }
 .marquee-item { display: flex; align-items: center; gap: 32px; padding-right: 32px; }
 .marquee-item .mono { font-size: 10px; font-weight: 500; color: rgba(255,255,255,.45); }
@@ -346,7 +355,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <header class="nav" id="nav">
     <a href="#home" class="logo" aria-label="Down2Chill Homepage">
       <span class="logo-badge"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg></span>
-      <img class="logo-word" src="assets/down2chill_dark.svg" alt="DOWN2CHILL">
+      <img class="logo-word" src="assets/down2chill_light.svg" alt="DOWN2CHILL">
     </a>
     <nav class="nav-links" aria-label="Main navigation">
       <a href="#features">FEATURES</a>
@@ -824,10 +833,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     document.querySelectorAll('.js-primary, .js-store').forEach(function (a) { a.href = playStoreUrl; });
   }
 
-  // nav background on scroll
+  // nav background on scroll + auto-hide on mobile (down hides, up reveals; CSS limits hide
+  // to <768px). The page scrolls inside .d2c-page, not the document — read scrollTop there.
   var nav = document.getElementById('nav');
-  var onScroll = function () { nav.classList.toggle('nav-scrolled', window.scrollY > 28); };
-  window.addEventListener('scroll', onScroll);
+  var page = document.querySelector('.d2c-page');
+  var lastY = page.scrollTop;
+  var onScroll = function () {
+    var y = page.scrollTop;
+    nav.classList.toggle('nav-scrolled', y > 28);
+    var menuOpen = document.getElementById('mobileMenu').classList.contains('open');
+    if (y <= 80 || menuOpen || y < lastY - 4) nav.classList.remove('nav-hidden');
+    else if (y > lastY + 4) nav.classList.add('nav-hidden');
+    lastY = y;
+  };
+  page.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
   // mobile menu
