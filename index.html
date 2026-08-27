@@ -143,8 +143,11 @@ section[id], span[id] { scroll-margin-top: 96px; }
 .marquee { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; overflow: hidden; border-top: 1px solid rgba(255,255,255,.1); background: rgba(63,47,174,.4); padding: 12px 0; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 /* iOS only: keep ticker text above the home indicator (Android browsers report bogus/system-bar insets) */
 @supports (-webkit-touch-callout: none) { .marquee { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); } }
-/* CookieYes (injected by GTM): suppress every piece of its UI — banner, overlay, revisit button */
-.cky-consent-container, .cky-overlay, .cky-btn-revisit-wrapper, .cky-modal { display: none !important; }
+/* CookieYes (injected by GTM): never auto-pop — banner/overlay render only while body carries
+   .cky-open (set by clicking the revisit button, cleared again on any close/consent action) */
+body:not(.cky-open) .cky-consent-container, body:not(.cky-open) .cky-overlay { display: none !important; }
+/* revisit button: always visible, pinned bottom-right just above the ticker (beats its inline styles) */
+.cky-btn-revisit-wrapper { display: flex !important; position: fixed !important; top: auto !important; left: auto !important; right: 12px !important; bottom: 46px !important; z-index: 45 !important; }
 .marquee-track { display: flex; width: max-content; align-items: center; white-space: nowrap; animation: marquee 28s linear infinite; }
 .marquee-item { display: flex; align-items: center; gap: 32px; padding-right: 32px; }
 .marquee-item .mono { font-size: 10px; font-weight: 500; color: rgba(255,255,255,.45); }
@@ -848,6 +851,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   };
   page.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
+
+  // CookieYes gate: revisit click unlocks the banner; any close/consent action re-clamps it.
+  // Capture phase so CookieYes stopping propagation can't starve us.
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest) return;
+    if (e.target.closest('.cky-btn-revisit-wrapper')) document.body.classList.add('cky-open');
+    else if (e.target.closest('.cky-btn-accept, .cky-btn-reject, .cky-btn-preferences, .cky-banner-btn-close, .cky-preference-close, .cky-overlay'))
+      setTimeout(function () { document.body.classList.remove('cky-open'); }, 500);
+  }, true);
+  document.addEventListener('cookieyes_consent_update', function () {
+    setTimeout(function () { document.body.classList.remove('cky-open'); }, 500);
+  });
 
   // mobile menu
   var menuBtn = document.getElementById('menuBtn');
