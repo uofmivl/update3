@@ -894,7 +894,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       Array.prototype.find.call(document.querySelectorAll('.cky-modal button, .cky-consent-container button'), function (b) { return /save/i.test(b.textContent); });
   };
   document.addEventListener('click', function (e) {
-    if (!e.target.closest) return;
+    if (!e.isTrusted || !e.target.closest) return;  // our own synthetic clicks on hidden CookieYes controls must not close the panel
     if (e.target.closest('.cky-btn-revisit-wrapper')) {
       e.preventDefault(); e.stopPropagation();
       var box = ckyBox();
@@ -906,11 +906,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   }, true);
   document.getElementById('ppClose').addEventListener('click', function () { panel.hidden = true; });
   ppToggle.addEventListener('change', function () {
+    var want = !ppToggle.checked;  // desired CookieYes opt-out state (inverse of the switch)
     var box = ckyBox();
     if (!box) return;
-    if (box.checked === ppToggle.checked) box.click();
+    if (box.checked !== want) box.click();
     var save = ckySave();
     if (save) save.click();
+    setTimeout(function () {  // CookieYes may re-render after saving — verify, retry once, resync UI
+      var b = ckyBox();
+      if (b && b.checked !== want) { b.click(); var s = ckySave(); if (s) s.click(); b = ckyBox(); }
+      if (b) ppToggle.checked = !b.checked;
+    }, 400);
   });
 
   // mobile menu
