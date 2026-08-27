@@ -520,6 +520,12 @@ body.lb-open #app{overflow:hidden}
 .composer button:active{transform:scale(.95)}
 .composer button[disabled]{opacity:.45;box-shadow:none;filter:grayscale(.5);cursor:not-allowed}
 .composer svg.i{width:22px;height:22px;stroke-width:2}
+.composer .attach{background:#fbfbfe;border:1px solid var(--line-2);color:var(--primary-ink);box-shadow:none}
+.msg.me .who2{color:rgba(255,255,255,.82);text-align:right}
+.msg .bub .chat-img{width:210px;max-width:100%;height:auto;max-height:280px;object-fit:cover;
+  border-radius:13px;display:block;cursor:zoom-in;margin:2px 0 4px;background:var(--soft)}
+.strip .sph{padding:0;overflow:hidden;cursor:zoom-in}
+.strip .sph img{display:block}
 
 /* ---- toast ---- */
 .toast{position:fixed;z-index:80;left:50%;bottom:calc(112px + env(safe-area-inset-bottom));
@@ -1160,6 +1166,13 @@ button.view-all{display:block;width:100%;text-align:center}
 var TODAY = '2021-07-31';           // mock "today"
 var AV = function(seed){ return 'https://picsum.photos/seed/'+seed+'/140/140'; };
 var IMG = function(seed,w,h){ return 'https://picsum.photos/seed/'+seed+'/'+w+'/'+h; };
+/* generic grey person avatar — every real (non-sample) profile without a photo */
+var GAV = 'data:image/svg+xml,'+encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140">'+
+  '<rect width="140" height="140" fill="#e5e7eb"/>'+
+  '<circle cx="70" cy="53" r="23" fill="none" stroke="#9ca3af" stroke-width="9"/>'+
+  '<path d="M26 121a44 44 0 0 1 88 0" fill="none" stroke="#9ca3af" stroke-width="9" stroke-linecap="round"/>'+
+  '</svg>');
 
 /* Local records use a short authored id. Firestore assigns the real document id
    at seed time and it is written back onto each record as .fsId               */
@@ -1186,7 +1199,7 @@ var PERSON = {};
 SEED_PEOPLE.forEach(function(p){ PERSON[p.id]=p; });
 function pn(id){ var p=PERSON[id]; return p?p.name:'Unknown'; }
 function pf(id){ return pn(id).split(' ')[0]; }
-function pav(id){ var p=PERSON[id]; return AV(p?p.avatar:'anon'); }
+function pav(id){ var p=PERSON[id]; return p?AV(p.avatar):GAV; }
 
 var VIOLET='#6d28d9', BLUE='#2563eb', GREEN='#16a34a', ORANGE='#f97316';
 
@@ -1464,7 +1477,7 @@ function loadMe(){
   if(!ME.plus || typeof ME.plus !== 'object') ME.plus = {};
   return ME;
 }
-function meAvatar(){ var m = loadMe(); return m.photo || AV('me-' + m.uid); }
+function meAvatar(){ var m = loadMe(); return m.photo || GAV; }
 function normPhone(p){ return String(p || '').replace(/\D/g, '').slice(-10); }
 function regAll(){
   try{ return JSON.parse(localStorage.getItem(REG_KEY) || '{}') || {}; }catch(e){ return {}; }
@@ -1593,9 +1606,12 @@ function ago(isoTs){
   return new Date(t).toLocaleDateString();
 }
 function msgFrom(m){
+  /* "me" is in the eye of the viewer — the stored isYou flag only breaks the
+     tie for legacy messages that carry no uid. */
   return { fromUid: m.fromUid || "", fromName: m.fromName || "Someone",
            fromAvatarUrl: m.fromAvatarUrl || "", text: m.text || "",
-           at: m.at || "", isYou: !!m.isYou };
+           imageUrl: m.imageUrl || "", at: m.at || "",
+           isYou: m.fromUid ? myUids().indexOf(m.fromUid) > -1 : !!m.isYou };
 }
 
 /* ---------- mapping ---------- */
@@ -1691,12 +1707,13 @@ function seedDetail(ev){
 }
 
 /* Append locally (offline mode); live mode goes through D2C.sendMessage. */
-function appendLocalMessage(id, text){
+function appendLocalMessage(id, text, imageUrl){
   var ev = STORE.byId[id]; if(!ev) return;
   var m = loadMe();
   ev.messages = (ev.messages || []).concat([{
     fromUid: m.uid, fromName: m.name || "Guest", fromAvatarUrl: meAvatar(),
-    text: text, at: new Date().toISOString(), isYou: true
+    text: text || "", imageUrl: imageUrl || "",
+    at: new Date().toISOString(), isYou: true
   }]);
   STORE.notify();
 }
@@ -1884,12 +1901,13 @@ function renderHome(tab,q,open){
   open = !!open || !!q;
   var heading = tab==='hosting'?'Hosting' : tab==='past'?'Past' : 'Upcoming';
   return '<div class="sky"><div class="wrap">'+
-      '<div class="brand"><a class="icon-btn" href="#home" aria-label="Back">'+ico('back')+'</a>'+
+      '<div class="brand"><a class="icon-btn" href="https://down2chill.com" aria-label="Back to down2chill.com">'+ico('back')+'</a>'+
         brandMark()+'</div>'+
       '<div class="page-h"><h1>Events</h1><div class="btns">'+
         '<button class="round-btn'+(open?' on':'')+'" type="button" data-focus-search '+
           'aria-expanded="'+!!open+'" aria-label="Search events">'+ico('search')+'</button>'+
-        '<button class="round-btn" type="button" aria-label="Filters">'+ico('sliders')+'</button>'+
+        /* filters is parked for now — unhide when it does something */
+        '<button class="round-btn" type="button" aria-label="Filters" style="display:none">'+ico('sliders')+'</button>'+
         '<a class="round-btn" href="#profile" data-nav aria-label="Your profile">'+
           '<img class="me-mini" src="'+h(meAvatar())+'" alt=""></a>'+
       '</div></div>'+
@@ -2007,7 +2025,10 @@ function renderEvent(id){
   var photosBlock = ev.photos
     ? '<div class="strip"><button class="add-photo" type="button" data-addphoto="'+ev.id+'">'+
         ico('cam-plus')+'<b>Add Photo</b><small>Share memories from this event</small></button>'+
-        ev.photos.slice(0,8).map(function(p){ return img(p.thumbUrl,''); }).join('')+'</div>'+
+        ev.photos.slice(0,8).map(function(p,i){
+          return '<button class="sph" type="button" data-ph="'+i+'" aria-label="Open photo '+(i+1)+
+            ' of '+ev.photos.length+'">'+img(p.thumbUrl,'Photo '+(i+1)+' by '+p.byName)+'</button>';
+        }).join('')+'</div>'+
       '<p class="strip-meta">'+ev.photoCount+' shared photos &nbsp;\u00B7&nbsp; Last added '+
         h(ev.lastPhotoLabel)+'</p>'
     : skel('Loading photos\u2026');
@@ -2016,7 +2037,8 @@ function renderEvent(id){
   var chatBlock = last
     ? '<div class="chat-card"><div class="av-wrap">'+img(last.fromAvatarUrl,'')+
         (ev.chatUnread?'<span class="badge">'+ev.chatUnread+'</span>':'')+'</div>'+
-        '<div class="chat-txt"><b>'+h(fname(last.fromName))+'</b><p>'+h(last.text)+
+        '<div class="chat-txt"><b>'+h(fname(last.fromName))+'</b><p>'+
+        h(last.text || (last.imageUrl?'📷 Photo':''))+
         '</p><small>'+h(ago(last.at))+'</small></div>'+
         '<a class="ghost" href="#chat/'+ev.id+'" data-nav>'+ico('chat')+'Open Chat</a></div>'
     : '<div class="chat-card"><div class="chat-txt"><p>No messages yet.</p></div>'+
@@ -2092,7 +2114,7 @@ function renderEvent(id){
         photosBlock+
         '<a class="link-row" href="#photos/'+ev.id+'" data-nav>See everyone\u2019s photos '+ico('arr')+'</a>'+
       '</section>'+
-      '<section class="sec"><div class="sec-h"><h2>Chat</h2><a class="link" href="#">View chat</a></div>'+
+      '<section class="sec"><div class="sec-h"><h2>Chat</h2><a class="link" href="#chat/'+ev.id+'" data-nav>View chat</a></div>'+
         chatBlock+
         '<p class="strip-meta">Everyone invited to the event can join the conversation.</p>'+
       '</section>'+
@@ -2286,8 +2308,11 @@ function renderChat(id){
     ? '<div class="thread">'+msgs.map(function(m){
         return '<div class="msg'+(m.isYou?' me':'')+'">'+
           (m.isYou?'':img(m.fromAvatarUrl,''))+
-          '<div class="bub">'+(m.isYou?'':'<span class="who2">'+h(fname(m.fromName))+'</span>')+
-            '<p>'+h(m.text)+'</p><time>'+h(ago(m.at))+'</time></div>'+
+          '<div class="bub"><span class="who2">'+(m.isYou?'You':h(m.fromName))+'</span>'+
+            (m.imageUrl?'<img class="chat-img" src="'+h(m.imageUrl)+'" data-imgview="'+h(m.imageUrl)+
+              '" data-imgby="'+h(fname(m.fromName))+'" alt="Photo from '+h(fname(m.fromName))+'">':'')+
+            (m.text?'<p>'+h(m.text)+'</p>':'')+
+            '<time>'+h(ago(m.at))+'</time></div>'+
         '</div>'; }).join('')+'</div>'
     : '<p class="chat-empty">No messages yet. Say hello \uD83D\uDC4B</p>';
 
@@ -2307,6 +2332,8 @@ function renderChat(id){
 }
 function composer(id){
   return '<div class="composer"><div class="composer-in">'+
+    '<button class="attach" type="button" id="msg-attach" data-event="'+id+'" aria-label="Send a photo">'+
+      ico('image')+'</button>'+
     '<input type="text" id="msg-in" placeholder="Message the group\u2026" aria-label="Write a message" '+
       'autocomplete="off" data-event="'+id+'">'+
     '<button type="button" id="msg-send" data-event="'+id+'" aria-label="Send">'+ico('nav')+'</button>'+
@@ -2957,7 +2984,7 @@ function hashStr(s){
   for(i = 0; i < s.length; i++) hOut = (hOut * 31 + s.charCodeAt(i)) | 0;
   return hOut;
 }
-function faceOf(p){ return p.photo || AV('mg-' + p.id); }
+function faceOf(p){ return p.photo || GAV; }
 function extraAt(d, id){
   for(var i = 0; i < d.extra.length; i++) if(d.extra[i].id === id) return i;
   return -1;
@@ -3576,7 +3603,7 @@ function claimCard(ev){
   var rows = claimList(ev).filter(function(g){ return !taken[g.name.toLowerCase()]; })
     .map(function(g){
       return '<button class="claim-row" type="button" data-claim="' + h(g.name) + '">' +
-        '<img src="' + h(g.avatarUrl || AV('cg-' + g.name)) + '" alt="">' +
+        '<img src="' + h(g.avatarUrl || GAV) + '" alt="">' +
         '<b>' + h(g.name) + '</b>' + (g.phone ? '<span>' + h(g.phone) + '</span>' : '') +
       '</button>';
     }).join('');
@@ -3702,7 +3729,7 @@ function renderProfile(){
       '<p class="fsub">These visitor ids share your phone number, so their events count as yours.</p>' +
       '<div class="glist">' + linked.map(function(p){
         var k = (p.events || []).length;
-        return '<div class="grow"><span class="gav"><img src="' + h(p.photo || AV('me-' + p.uid)) + '" alt=""></span>' +
+        return '<div class="grow"><span class="gav"><img src="' + h(p.photo || GAV) + '" alt=""></span>' +
           '<span class="gtx"><b>' + h(p.name || 'Unnamed visitor') + '</b>' +
           '<span>' + h(p.uid) + ' \u00B7 ' + k + (k === 1 ? ' event' : ' events') + '</span></span></div>';
       }).join('') + '</div></section>' : '') +
@@ -3868,6 +3895,8 @@ function eventDock(id){
 
     var send=t.closest('#msg-send');
     if(send){ sendMsg(send.dataset.event); return; }
+    var att=t.closest('#msg-attach');
+    if(att){ sendImg(att.dataset.event); return; }
 
     var addp=t.closest('[data-addphoto]');
     if(addp){
@@ -4189,9 +4218,15 @@ function eventDock(id){
 
     var ph=t.closest('[data-ph]');
     if(ph){ openLb(route().id, +ph.dataset.ph); return; }
+    var ivw=t.closest('[data-imgview]');
+    if(ivw){ openImgLb(ivw.dataset.imgview, ivw.dataset.imgby||''); return; }
     var lbs=t.closest('[data-lb-step]');
     if(lbs){ stepLb(+lbs.dataset.lbStep); return; }
-    if(t.closest('[data-lb-close]') || (lbEvent && t===lb)){ closeLb(); return; }
+    /* NB: `lb` is shadowed here — a `var lb` in the search branch above hoists
+       over the lightbox element, so match the element itself. Clicks on the
+       empty stage (beside the image) count as the backdrop too. */
+    if(t.closest('[data-lb-close]') || t.id==='lightbox' || t.classList.contains('lb-stage')){
+      closeLb(); return; }
 
     var rs=t.closest('#rsvp button[data-k]');
     if(rs){ rsvp(rs); return; }
@@ -4362,7 +4397,7 @@ function eventDock(id){
        ranked below every real photo so skipping never discards a real one */
     profs.forEach(function(p){
       if(p.photo) return;
-      var d=AV('me-'+p.uid);
+      var d=GAV;
       if(!seenP[d]){ seenP[d]=1; photos.push({ v:d, mine:p.uid===m.uid, def:true }); }
     });
     applyMerge(names.length?names[0].v:'',
@@ -4611,6 +4646,25 @@ function eventDock(id){
     }
     scrollThread();
   }
+  /* a picture message: picked from the OS, uploaded to the chat prefix */
+  function sendImg(id){
+    var input=document.getElementById('photo-input');
+    input.value='';
+    input.onchange=function(){
+      var file=input.files && input.files[0];
+      if(!file) return;
+      if(STORE.mode==='live' && window.D2C && D2C.sendImage){
+        toast('Sending photo…','wait',0);
+        D2C.sendImage(id, file)
+          .then(function(){ toast('Photo sent'); scrollThread(); })
+          .catch(function(e){ toast(e.message||'Could not send photo','err'); });
+      } else {
+        appendLocalMessage(id, '', URL.createObjectURL(file));
+        scrollThread();
+      }
+    };
+    input.click();
+  }
 
   function closeModal(){
     confirmFn=null; pendingRsvp=null; pendingName=null;
@@ -4636,6 +4690,16 @@ function eventDock(id){
     if(lb.hidden) return;
     lb.hidden=true; lb.innerHTML=''; lbEvent=null;
     document.body.classList.remove('lb-open');
+  }
+  /* one loose image (a chat photo) in the same viewer, no arrows */
+  function openImgLb(src, by){
+    lbEvent=null;
+    lb.innerHTML='<div class="lb-bar"><span class="cnt">'+(by?'Photo from '+h(by):'Photo')+'</span>'+
+        '<button type="button" data-lb-close aria-label="Close photo">'+ico('x')+'</button></div>'+
+      '<div class="lb-stage"><img src="'+h(src)+'" alt="'+(by?'Photo from '+h(by):'Photo')+'"></div>';
+    lb.hidden=false;
+    document.body.classList.add('lb-open');
+    var c=lb.querySelector('[data-lb-close]'); if(c) c.focus();
   }
 
   /* ---------- drag-to-scroll photo strips ---------- */
@@ -4915,10 +4979,12 @@ const SDK = "https://www.gstatic.com/firebasejs/12.3.0/";
 /* Namespacing — this bucket/database already hold other data, so everything
    this app writes lives under one prefix and nothing else is touched.
      Firestore : apps/down2chill/{events,people}/...
-     Storage   : down2chill/events/{eventId}/photos/...                     */
+     Storage   : down2chill/events/{eventId}/photos/...  (event albums)
+                 down2chill/chat/{eventId}/...           (chat pictures)   */
 const FS_ROOT    = ["apps", "down2chill"];
 const PHOTO_ROOT = "down2chill/events";
 const COVER_ROOT = "down2chill/covers";
+const CHAT_ROOT  = "down2chill/chat";
 
 let fb = null;      // { app, db, storage, auth, uid, api:{...} }
 
@@ -4989,7 +5055,8 @@ function renderConn(){
     ["origin",    location.protocol === "file:" ? "file:// — serve over http instead" : location.origin,
                   location.protocol !== "file:"],
     ["firestore",  FS_ROOT.join("/") + "/events", true],
-    ["storage",    PHOTO_ROOT + "/", true]
+    ["storage",    PHOTO_ROOT + "/", true],
+    ["chat imgs",  CHAT_ROOT + "/", true]
   ];
   box.innerHTML = rows.map(r =>
     '<div class="fb-kv ' + (r[2] ? "good" : "bad") + '"><b>' + r[0] + '</b><span>' + r[1] + '</span></div>'
@@ -5528,8 +5595,36 @@ async function sendMessage(eventId, text){
   });
 }
 
+/* A picture message. The file lives under its own storage prefix (CHAT_ROOT),
+   apart from the event photo albums, and the message rides the same
+   chatMessages array with an imageUrl instead of text. */
+async function sendImage(eventId, file){
+  const { db, storage, fs, st } = await initFirebase();
+  if(!eventId) throw new Error("No event id.");
+  if(!file) throw new Error("Choose an image file first.");
+  if(!/^image\//.test(file.type)) throw new Error("That file isn’t an image.");
+  if(file.size > 25 * 1024 * 1024)
+    throw new Error("File is " + (file.size/1048576).toFixed(1) + " MB — the limit is 25 MB.");
+
+  const safe = file.name.replace(/[^\w.\-]+/g, "_");
+  const path = CHAT_ROOT + "/" + eventId + "/" + Date.now() + "_" + safe;
+  const ref  = st.ref(storage, path);
+  await st.uploadBytes(ref, file, { contentType: file.type });
+  const url  = await st.getDownloadURL(ref);
+
+  const me = meIdent();
+  await fs.updateDoc(fs.doc(db, ...FS_ROOT, "events", eventId), {
+    chatMessages: fs.arrayUnion({
+      fromUid: me.fsId || "", fromName: me.name, fromAvatarUrl: me.av,
+      text: "", imageUrl: url, imagePath: path,
+      at: new Date().toISOString(), isYou: true
+    })
+  });
+  return { url, path };
+}
+
 window.D2C = {
-  pickPhoto, sendMessage, uploadCover, createEvent, updateEvent, deleteEvent,
+  pickPhoto, sendMessage, sendImage, uploadCover, createEvent, updateEvent, deleteEvent,
   saveProfile, findByPhone, setRsvp, setPlus, propagateProfile, announceGuest, renameLinked,
   watchEvent(id){ watchingId = id; stopDetail(); watchDetail(id); },
   unwatchEvent(){ watchingId = null; stopDetail(); },
