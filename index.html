@@ -91,6 +91,7 @@ section[id], span[id] { scroll-margin-top: 96px; }
 .mobile-menu a:hover { background: rgba(255,255,255,.1); }
 .mobile-menu .mm-cta { margin-top: 8px; display: flex; width: 100%; align-items: center; justify-content: center; background: #fff; color: #25205e; font-weight: 800; }
 @media (min-width: 640px) { .nav { padding-left: 20px; padding-right: 20px; } .nav-cta { display: block; } }
+@media (max-width: 767px) { .nav-hidden { transform: translate(-50%, calc(-100% - 24px - env(safe-area-inset-top))); } }
 @media (min-width: 768px) { .nav-links { display: flex; } .menu-btn { display: none; } .mobile-menu { display: none !important; } }
 
 /* ---------- hero ---------- */
@@ -112,6 +113,7 @@ section[id], span[id] { scroll-margin-top: 96px; }
 .hero-social-note { font-size: 11px; color: rgba(255,255,255,.6); }
 .hero-shot { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; }
 @media (min-width: 640px) { .hero { padding-top: 176px; } .hero-sub { font-size: 18px; } }
+@media (max-width: 639px) { .hero { padding-top: 110px; } }
 @media (min-width: 1024px) { .hero-grid { grid-template-columns: 1.06fr .94fr; } .hero-shot { translate: 0 -16px; } }
 
 /* download buttons */
@@ -824,10 +826,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     document.querySelectorAll('.js-primary, .js-store').forEach(function (a) { a.href = playStoreUrl; });
   }
 
-  // nav background on scroll
+  // nav background on scroll + auto-hide on mobile (down hides, up reveals; CSS limits hide to <768px)
   var nav = document.getElementById('nav');
-  var onScroll = function () { nav.classList.toggle('nav-scrolled', window.scrollY > 28); };
-  window.addEventListener('scroll', onScroll);
+  var lastY = window.scrollY;
+  var onScroll = function () {
+    var y = window.scrollY;
+    nav.classList.toggle('nav-scrolled', y > 28);
+    var menuOpen = document.getElementById('mobileMenu').classList.contains('open');
+    if (y <= 80 || menuOpen || y < lastY - 4) nav.classList.remove('nav-hidden');
+    else if (y > lastY + 4) nav.classList.add('nav-hidden');
+    lastY = y;
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
   // mobile menu
