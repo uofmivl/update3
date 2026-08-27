@@ -78,8 +78,7 @@ section[id], span[id] { scroll-margin-top: 96px; }
 .nav { position: fixed; left: 50%; top: calc(16px + env(safe-area-inset-top)); z-index: 50; display: flex; width: calc(100% - 32px); max-width: 1160px; transform: translateX(-50%); align-items: center; justify-content: space-between; border-radius: 999px; border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.07); padding: 12px 16px; transition: all .3s; }
 .nav-scrolled { background: rgba(7,25,58,.78); border-color: rgba(255,255,255,.25); box-shadow: 0 14px 45px rgba(11,42,101,.24); }
 .logo { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; }
-.logo-badge { position: relative; display: flex; height: 28px; width: 28px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9px; border: 1px solid rgba(255,255,255,.7); }
-.logo-badge svg { transform: rotate(-42deg); }
+.logo-badge { position: relative; display: flex; height: 28px; width: 28px; flex-shrink: 0; align-items: center; justify-content: center; }
 .logo-word { display: block; height: 14px; width: auto; }
 .nav-links { display: none; align-items: center; gap: 32px; }
 .nav-links a { font-size: 11px; font-weight: 600; color: rgba(255,255,255,.65); text-decoration: none; transition: color .15s; }
@@ -311,7 +310,7 @@ body:not(.cky-open) .cky-consent-container, body:not(.cky-open) .cky-overlay { d
 .join-divider { position: relative; margin: 40px auto 0; max-width: 470px; border-top: 1px solid rgba(255,255,255,.15); padding-top: 28px; }
 .join-hint { margin-bottom: 12px; font-size: 12px; color: rgba(255,255,255,.6); }
 .join-form { display: flex; flex-direction: column; gap: 8px; }
-.join-input { height: 56px; min-width: 0; flex: 1; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: rgba(45,41,129,.45); padding: 0 20px; font-size: 16px; color: #fff; outline: none; }
+.join-input { height: 56px; min-height: 56px; min-width: 0; flex: 1; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: rgba(45,41,129,.45); padding: 0 20px; font-size: 16px; color: #fff; outline: none; }
 .join-input::placeholder { color: rgba(255,255,255,.4); }
 .join-input:focus { border-color: #dffcff; }
 .join-btn { display: flex; height: 56px; align-items: center; justify-content: center; gap: 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.1); padding: 0 24px; font-size: 12px; font-weight: 800; letter-spacing: .07em; color: #fff; transition: background .15s; }
@@ -357,7 +356,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- nav -->
   <header class="nav" id="nav">
     <a href="#home" class="logo" aria-label="Down2Chill Homepage">
-      <span class="logo-badge"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg></span>
+      <span class="logo-badge"><img src="assets/couch.svg" width="28" height="14" alt=""></span>
       <img class="logo-word" src="assets/down2chill_light.svg" alt="DOWN2CHILL">
     </a>
     <nav class="nav-links" aria-label="Main navigation">
@@ -793,8 +792,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <footer id="contact" class="footer">
     <div class="footer-inner">
       <a href="#home" class="logo" aria-label="Down2Chill">
-        <span class="logo-badge"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg></span>
-        <img class="logo-word" src="assets/down2chill_dark.svg" alt="DOWN2CHILL">
+        <span class="logo-badge"><img src="assets/couch.svg" width="28" height="14" alt=""></span>
+        <img class="logo-word" src="assets/down2chill_light.svg" alt="DOWN2CHILL">
       </a>
       <div class="footer-links">
         <a href="#home">BACK TO TOP</a>
@@ -877,6 +876,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   };
   menuBtn.addEventListener('click', function () { setMenu(!mobileMenu.classList.contains('open')); });
   mobileMenu.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', function () { setMenu(false); }); });
+  // click anywhere outside the popup (and outside its toggle button) closes it
+  document.addEventListener('click', function (e) {
+    if (!mobileMenu.classList.contains('open')) return;
+    if (e.target.closest && e.target.closest('#mobileMenu, #menuBtn')) return;
+    setMenu(false);
+  });
 
   // marquee: repeat whole copies until the track spans 2 viewports (halves stay identical,
   // so the -50% loop wraps seamlessly); duration scales with width to hold ~27px/s
