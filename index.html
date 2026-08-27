@@ -145,6 +145,8 @@ section[id], span[id] { scroll-margin-top: 96px; }
 /* CookieYes (injected by GTM): never auto-pop — banner/overlay render only while body carries
    .cky-open (set by clicking the revisit button, cleared again on any close/consent action) */
 body:not(.cky-open) .cky-consent-container, body:not(.cky-open) .cky-overlay { display: none !important; }
+/* the "We value your privacy" banner never shows — only the opt-out preferences modal does */
+.cky-consent-bar { display: none !important; }
 /* revisit button: always visible, pinned bottom-right just above the ticker (beats its inline styles) */
 .cky-btn-revisit-wrapper { display: flex !important; position: fixed !important; top: auto !important; left: auto !important; right: 12px !important; bottom: 46px !important; z-index: 45 !important; }
 .marquee-track { display: flex; width: max-content; align-items: center; white-space: nowrap; animation: marquee 28s linear infinite; }
@@ -856,7 +858,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   document.addEventListener('click', function (e) {
     if (!e.target.closest) return;
     if (e.target.closest('.cky-btn-revisit-wrapper')) document.body.classList.add('cky-open');
-    else if (e.target.closest('.cky-btn-accept, .cky-btn-reject, .cky-btn-preferences, .cky-banner-btn-close, .cky-preference-close, .cky-overlay'))
+    else if (e.target.closest('.cky-btn-accept, .cky-btn-reject, .cky-btn-preferences, .cky-btn-cancel, .cky-modal-close, .cky-banner-btn-close, .cky-preference-close, .cky-overlay'))
       setTimeout(function () { document.body.classList.remove('cky-open'); }, 500);
   }, true);
   document.addEventListener('cookieyes_consent_update', function () {
