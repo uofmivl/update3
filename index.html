@@ -91,7 +91,6 @@ section[id], span[id] { scroll-margin-top: 96px; }
 .mobile-menu a:hover { background: rgba(255,255,255,.1); }
 .mobile-menu .mm-cta { margin-top: 8px; display: flex; width: 100%; align-items: center; justify-content: center; background: #fff; color: #25205e; font-weight: 800; }
 @media (min-width: 640px) { .nav { padding-left: 20px; padding-right: 20px; } .nav-cta { display: block; } }
-@media (max-width: 767px) { .nav-hidden { transform: translate(-50%, calc(-100% - 24px - env(safe-area-inset-top, 0px))); } }
 @media (min-width: 768px) { .nav-links { display: flex; } .menu-btn { display: none; } .mobile-menu { display: none !important; } }
 
 /* ---------- hero ---------- */
@@ -113,7 +112,6 @@ section[id], span[id] { scroll-margin-top: 96px; }
 .hero-social-note { font-size: 11px; color: rgba(255,255,255,.6); }
 .hero-shot { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; }
 @media (min-width: 640px) { .hero { padding-top: 176px; } .hero-sub { font-size: 18px; } }
-@media (max-width: 639px) { .hero { padding-top: 110px; } .d2c-page { padding-bottom: 38px; } }
 @media (min-width: 1024px) { .hero-grid { grid-template-columns: 1.06fr .94fr; } .hero-shot { translate: 0 -16px; } }
 
 /* download buttons */
@@ -137,14 +135,7 @@ section[id], span[id] { scroll-margin-top: 96px; }
 @media (max-width: 640px) { .download-actions { align-items: stretch; } .cta-pair { width: 100%; } .download-primary { width: 100%; } .invite-btn { width: 100%; } .download-secondary { justify-content: center; padding-left: 0; } .hero-join-link { display: flex; margin: 17px auto 0; } .phone-frame { width: 272px; transform: rotate(2deg); } }
 
 /* ---------- marquee ---------- */
-.marquee { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; overflow: hidden; border-top: 1px solid rgba(255,255,255,.1); background: rgba(63,47,174,.4); padding: 12px 0; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-/* iOS only: keep ticker text above the home indicator (Android browsers report bogus/system-bar insets) */
-@supports (-webkit-touch-callout: none) { .marquee { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); } }
-/* skirt: same-color strip extending ~65px below the viewport edge so dynamic-toolbar resizes never flash a gap */
-.marquee { box-shadow: 0 50px 0 15px rgba(63,47,174,.4); }
-/* CookieYes: its dismissed banner parks just below the viewport with a shadow halo that peeks back in when mobile toolbars collapse */
-.cky-consent-bar { box-shadow: none !important; border-top: 0 !important; }
-.cky-hide { display: none !important; }
+.marquee { position: fixed; left: 0; right: 0; bottom: 0; bottom: env(safe-area-inset-bottom, 0px); z-index: 40; overflow: hidden; border-top: 1px solid rgba(255,255,255,.1); background: rgba(63,47,174,.4); padding: 12px 0; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .marquee-track { display: flex; width: max-content; align-items: center; white-space: nowrap; animation: marquee 28s linear infinite; }
 .marquee-item { display: flex; align-items: center; gap: 32px; padding-right: 32px; }
 .marquee-item .mono { font-size: 10px; font-weight: 500; color: rgba(255,255,255,.45); }
@@ -355,7 +346,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <header class="nav" id="nav">
     <a href="#home" class="logo" aria-label="Down2Chill Homepage">
       <span class="logo-badge"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg></span>
-      <img class="logo-word" src="assets/down2chill_light.svg" alt="DOWN2CHILL">
+      <img class="logo-word" src="assets/down2chill_dark.svg" alt="DOWN2CHILL">
     </a>
     <nav class="nav-links" aria-label="Main navigation">
       <a href="#features">FEATURES</a>
@@ -833,44 +824,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     document.querySelectorAll('.js-primary, .js-store').forEach(function (a) { a.href = playStoreUrl; });
   }
 
-  // nav background on scroll + auto-hide on mobile (down hides, up reveals; CSS limits hide to <768px)
+  // nav background on scroll
   var nav = document.getElementById('nav');
-  var lastY = window.scrollY;
-  var onScroll = function () {
-    var y = window.scrollY;
-    nav.classList.toggle('nav-scrolled', y > 28);
-    var menuOpen = document.getElementById('mobileMenu').classList.contains('open');
-    if (y <= 80 || menuOpen || y < lastY - 4) nav.classList.remove('nav-hidden');
-    else if (y > lastY + 4) nav.classList.add('nav-hidden');
-    lastY = y;
-  };
-  window.addEventListener('scroll', onScroll, { passive: true });
+  var onScroll = function () { nav.classList.toggle('nav-scrolled', window.scrollY > 28); };
+  window.addEventListener('scroll', onScroll);
   onScroll();
-
-  // CookieYes parks its dismissed banner below the viewport where mobile toolbar
-  // collapse re-reveals its top edge — remove the bar for real once consent is actioned
-  document.addEventListener('cookieyes_consent_update', function () {
-    setTimeout(function () {
-      document.querySelectorAll('.cky-consent-bar').forEach(function (el) { el.style.display = 'none'; });
-    }, 600);
-  });
-
-  // mobile browsers resize the layout viewport late when their toolbar hides, so a
-  // bottom-fixed bar visibly jumps — track the visual viewport instead (|d| cap skips
-  // on-screen keyboards, scale guard skips pinch zoom)
-  var mq = document.querySelector('.marquee');
-  if (window.visualViewport) {
-    var vv = window.visualViewport, lastD = 0;
-    var pinMq = function () {
-      var d = Math.round(vv.offsetTop + vv.height - window.innerHeight);
-      if (Math.abs(vv.scale - 1) > .02 || Math.abs(d) > 160) d = 0;
-      if (d !== lastD) { lastD = d; mq.style.transform = d ? 'translateY(' + d + 'px)' : ''; }
-    };
-    vv.addEventListener('resize', pinMq);
-    vv.addEventListener('scroll', pinMq);
-    window.addEventListener('scroll', pinMq, { passive: true });
-    pinMq();
-  }
 
   // mobile menu
   var menuBtn = document.getElementById('menuBtn');
