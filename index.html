@@ -140,6 +140,11 @@ section[id], span[id] { scroll-margin-top: 96px; }
 .marquee { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; overflow: hidden; border-top: 1px solid rgba(255,255,255,.1); background: rgba(63,47,174,.4); padding: 12px 0; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 /* iOS only: keep ticker text above the home indicator (Android browsers report bogus/system-bar insets) */
 @supports (-webkit-touch-callout: none) { .marquee { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); } }
+/* skirt: same-color strip extending ~65px below the viewport edge so dynamic-toolbar resizes never flash a gap */
+.marquee { box-shadow: 0 50px 0 15px rgba(63,47,174,.4); }
+/* CookieYes: its dismissed banner parks just below the viewport with a shadow halo that peeks back in when mobile toolbars collapse */
+.cky-consent-bar { box-shadow: none !important; border-top: 0 !important; }
+.cky-hide { display: none !important; }
 .marquee-track { display: flex; width: max-content; align-items: center; white-space: nowrap; animation: marquee 28s linear infinite; }
 .marquee-item { display: flex; align-items: center; gap: 32px; padding-right: 32px; }
 .marquee-item .mono { font-size: 10px; font-weight: 500; color: rgba(255,255,255,.45); }
@@ -841,6 +846,31 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   };
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
+
+  // CookieYes parks its dismissed banner below the viewport where mobile toolbar
+  // collapse re-reveals its top edge — remove the bar for real once consent is actioned
+  document.addEventListener('cookieyes_consent_update', function () {
+    setTimeout(function () {
+      document.querySelectorAll('.cky-consent-bar').forEach(function (el) { el.style.display = 'none'; });
+    }, 600);
+  });
+
+  // mobile browsers resize the layout viewport late when their toolbar hides, so a
+  // bottom-fixed bar visibly jumps — track the visual viewport instead (|d| cap skips
+  // on-screen keyboards, scale guard skips pinch zoom)
+  var mq = document.querySelector('.marquee');
+  if (window.visualViewport) {
+    var vv = window.visualViewport, lastD = 0;
+    var pinMq = function () {
+      var d = Math.round(vv.offsetTop + vv.height - window.innerHeight);
+      if (Math.abs(vv.scale - 1) > .02 || Math.abs(d) > 160) d = 0;
+      if (d !== lastD) { lastD = d; mq.style.transform = d ? 'translateY(' + d + 'px)' : ''; }
+    };
+    vv.addEventListener('resize', pinMq);
+    vv.addEventListener('scroll', pinMq);
+    window.addEventListener('scroll', pinMq, { passive: true });
+    pinMq();
+  }
 
   // mobile menu
   var menuBtn = document.getElementById('menuBtn');
